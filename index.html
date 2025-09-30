@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>しりとりゲーム（Firebase）</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 2em auto;
+      padding: 1em;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+    h1 {
+      text-align: center;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+    button {
+      padding: 8px 12px;
+    }
+    #message {
+      color: red;
+      margin-top: 10px;
+    }
+    #history {
+      margin-top: 30px;
+    }
+    ul {
+      list-style-type: decimal;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 しりとりゲーム</h1>
+
+  <label>あなたの名前: <input id="name" type="text" /></label><br />
+  <label>単語を入力: <input id="word" type="text" /></label>
+  <button id="submit">送信</button>
+
+  <p id="message"></p>
+
+  <div id="history">
+    <h2>📜 しりとり履歴：</h2>
+    <ul id="list"></ul>
+  </div>
+
+  <!-- Firebase SDK + Realtime Database -->
+  <script type="module">
+    // Firebaseの読み込み
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      onValue
+    } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+    // 🔧 あなたのFirebase設定情報
+    const firebaseConfig = {
+      apiKey: "AIzaSyDBjkiRtm2nXvxf9dBVwtD6q78F9gO2e8k",
+      authDomain: "realtimedatabase3338.firebaseapp.com",
+      projectId: "realtimedatabase3338",
+      storageBucket: "realtimedatabase3338.firebasestorage.app",
+      messagingSenderId: "343347843835",
+      appId: "1:343347843835:web:345223da18bfb7b161d65e",
+      measurementId: "G-NHKFFB4P3B",
+      databaseURL: "https://realtimedatabase3338-default-rtdb.firebaseio.com"
+    };
+
+    // Firebase初期化
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const shiritoriRef = ref(db, "shiritori");
+
+    // DOM要素の取得
+    const nameInput = document.getElementById("name");
+    const wordInput = document.getElementById("word");
+    const submitBtn = document.getElementById("submit");
+    const list = document.getElementById("list");
+    const message = document.getElementById("message");
+
+    let lastWord = null;
+
+    // データの取得・表示
+    onValue(shiritoriRef, (snapshot) => {
+      const data = snapshot.val();
+      list.innerHTML = "";
+      message.textContent = "";
+
+      if (data) {
+        const entries = Object.values(data);
+        entries.forEach((entry, index) => {
+          const li = document.createElement("li");
+          li.textContent = `${index + 1}. ${entry.name}：${entry.word}`;
+          list.appendChild(li);
+        });
+
+        lastWord = entries[entries.length - 1].word;
+      } else {
+        lastWord = null;
+      }
+    });
+
+    // 送信ボタン処理
+    submitBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      const word = wordInput.value.trim();
+
+      if (!name || !word) {
+        message.textContent = "⚠️ 名前と単語を両方入力してください。";
+        return;
+      }
+
+      if (lastWord) {
+        const lastChar = lastWord.slice(-1);
+        if (word[0] !== lastChar) {
+          message.textContent = `❌ 「${lastChar}」で始まる単語を入力してください。`;
+          return;
+        }
+      }
+
+      if (word.endsWith("ん")) {
+        message.textContent = "💀 「ん」で終わる単語は負けです！やり直してください。";
+        return;
+      }
+
+      // 送信
+      push(shiritoriRef, {
+        name,
+        word
+      });
+
+      wordInput.value = "";
+      message.textContent = "✅ 送信しました！";
+    });
+  </script>
+</body>
+</html>
