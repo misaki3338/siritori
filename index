@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>しりとりゲーム</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input { padding: 5px; margin: 5px; }
+    #history { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🌟 しりとりゲーム（Firebase版）</h1>
+
+  <label>名前: <input id="name" type="text" /></label><br />
+  <label>単語: <input id="word" type="text" /></label>
+  <button id="submit">送信</button>
+
+  <p id="message"></p>
+
+  <div id="history">
+    <h3>しりとり履歴：</h3>
+    <ul id="list"></ul>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import {
+      getDatabase, ref, push, onValue
+    } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      // 省略可
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const shiritoriRef = ref(db, "shiritori");
+
+    const nameInput = document.getElementById("name");
+    const wordInput = document.getElementById("word");
+    const submitBtn = document.getElementById("submit");
+    const list = document.getElementById("list");
+    const message = document.getElementById("message");
+
+    // 単語履歴を表示
+    onValue(shiritoriRef, (snapshot) => {
+      const data = snapshot.val();
+      list.innerHTML = "";
+
+      let lastWord = null;
+      if (data) {
+        const entries = Object.values(data);
+        entries.forEach((entry, index) => {
+          const li = document.createElement("li");
+          li.textContent = `${index + 1}. ${entry.name}：${entry.word}`;
+          list.appendChild(li);
+          lastWord = entry.word;
+        });
+      }
+
+      // 前の単語チェック用
+      submitBtn.onclick = () => {
+        const name = nameInput.value.trim();
+        const word = wordInput.value.trim();
+
+        if (!name || !word) {
+          message.textContent = "名前と単語を入力してください。";
+          return;
+        }
+
+        if (lastWord) {
+          const lastChar = lastWord.slice(-1);
+          if (word[0] !== lastChar) {
+            message.textContent = `❌「${lastChar}」で始まっていません！`;
+            return;
+          }
+        }
+
+        // 正常：Firebaseに送信
+        push(shiritoriRef, {
+          name,
+          word
+        });
+        wordInput.value = "";
+        message.textContent = "✅ 登録しました！";
+      };
+    });
+  </script>
+</body>
+</html>
